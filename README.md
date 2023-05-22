@@ -67,7 +67,7 @@ Here are some of the API endpoints you can use:
 
 ## Notes
 
-The computation service can be interrupted with SIGINT or SIGTERM, at which point it will calculate and store distribution statistics.
+The computation service can be interrupted with CTRL+C or by closing your CLI , at which point it will calculate and store distribution statistics.
 
 The API includes a middleware for blocking requests from specific IPs. The list of blocked IPs can be updated by adding them to blocked_ips.txt and using the /refresh_block_list/{password} endpoint with the correct password.
 
