@@ -24,7 +24,7 @@ The Collatz Conjecture Explorer offers several features:
 First, clone this repository using git:
 
 ```bash
-git clone https://github.com/username/collatz_conjecture_explorer.git
+git clone https://github.com/akjroller/collatz_conjecture_explorer.git
 cd collatz_conjecture_explorer
 ```
 
