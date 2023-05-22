@@ -81,4 +81,4 @@ This project is licensed under the terms of the MIT license.
 
 ## Contact
 
-If you have any questions, you can contact the author at email@example.com.
+If you have any questions, you can contact the author at akjroller@gmail.com.
