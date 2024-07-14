@@ -14,7 +14,7 @@ The Collatz Conjecture Explorer offers several features:
 
 ## Requirements
 
-- Python 3.7 or newer
+- Python 3.11 or newer
 - SQLite3
 - FastAPI
 - Uvicorn (for serving the API)
@@ -81,4 +81,4 @@ This project is licensed under the terms of the MIT license.
 
 ## Contact
 
-If you have any questions, you can contact the author at akjroller@gmail.com.
+If you have any questions, you can contact the author at awakengaming83@gmail.com.
