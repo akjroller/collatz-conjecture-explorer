@@ -79,7 +79,7 @@ You can then access the API at http://localhost:8000. For example, to get the Co
 
 ## Public Access
 
-The API is publicly accessible at `https://collatz.therollermethod.com`. For example, to get the Collatz sequence for the number 6, you can access it at:
+The API is publicly accessible at `https://collatz.therollermethod.com`. For example, to get the Collatz sequence for the number 6, you can access it at: https://collatz.therollermethod.com/collatz/6
 
 ## API Endpoints
 
