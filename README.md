@@ -19,7 +19,30 @@ The Collatz Conjecture Explorer offers several features:
 - FastAPI
 - Uvicorn (for serving the API)
 
-## Installation
+## Docker Installation
+
+To run the Collatz Conjecture Explorer using Docker, follow these steps:
+
+1. Clone this repository using git:
+
+   ```bash
+   git clone https://github.com/akjroller/collatz_conjecture_explorer.git
+   cd collatz_conjecture_explorer
+   ```
+
+2. Build and start the Docker containers:
+
+   ```bash
+   docker compose up --build -d
+   ```
+
+   This command will build the Docker images and start the services in the background.
+
+3. Access the API:
+
+   The API will be accessible at http://localhost:8001. For example, to get the Collatz sequence for the number 6, you would access http://localhost:8001/collatz/6.
+
+## Manual Installation
 
 First, clone this repository using git:
 
@@ -35,6 +58,8 @@ pip install -r requirements.txt
 ```
 
 ## Usage
+
+change admin password in config.py
 
 To start the computation service, run:
 

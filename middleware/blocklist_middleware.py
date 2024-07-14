@@ -13,6 +13,7 @@ class BlockListMiddleware(BaseHTTPMiddleware):
         self.blocked_ips = blocked_ips
 
     async def dispatch(self, request: Request, call_next):
+        """Intercept the request and block it if the IP is in the blocklist."""
         ip = request.client.host
         try:
             with open("ip_addresses.txt", "r") as f:

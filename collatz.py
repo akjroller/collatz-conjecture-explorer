@@ -12,14 +12,14 @@ c = conn.cursor()
 
 
 def shutdown(signal, frame):
-    """Handle shutdown signal to calculate stats and close database connection."""
+    """Shutdown the process gracefully, calculating final stats."""
     calculate_stats()
     conn.close()
     sys.exit(0)
 
 
 def main():
-    """Main function to set up database and start Collatz processing."""
+    """Main function to setup the database and start Collatz sequence calculations."""
     setup_database()
 
     c.execute("SELECT MAX(starting_number) FROM collatz")
