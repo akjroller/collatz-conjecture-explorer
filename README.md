@@ -77,6 +77,10 @@ uvicorn app:app --host 0.0.0.0 --port 8000
 
 You can then access the API at http://localhost:8000. For example, to get the Collatz sequence for the number 6, you would access http://localhost:8000/collatz/6.
 
+## Public Access
+
+The API is publicly accessible at `https://collatz.therollermethod.com`. For example, to get the Collatz sequence for the number 6, you can access it at:
+
 ## API Endpoints
 
 Here are some of the API endpoints you can use:

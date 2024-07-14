@@ -76,3 +76,6 @@ ehthumbs.db
 Thumbs.db
 
 ip_addresses.txt
+
+# Ignore collatz.db-journal
+collatz.db-journal
