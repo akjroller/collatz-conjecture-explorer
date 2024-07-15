@@ -5,6 +5,7 @@ from routes import collatz, stats
 from database.database import setup_database
 import subprocess
 from config import ADMIN_PASSWORD
+import os
 
 # Initialize the FastAPI app
 app = FastAPI(
@@ -19,6 +20,9 @@ blocked_ips = []
 def update_blocked_ips():
     """Update the blocked IP list from a file."""
     global blocked_ips
+    if not os.path.exists("blocked_ips.txt"):
+        with open("blocked_ips.txt", "w") as f:
+            f.write("")  # Create an empty file
     with open("blocked_ips.txt", "r") as f:
         blocked_ips = f.read().splitlines()
 
