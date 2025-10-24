@@ -1,35 +1,47 @@
+from typing import Iterable, List
+
 from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
+from database import models
 from database.database import get_db
-from database.models import CollatzRecord
 from utils.logger import logger
 
 router = APIRouter()
 
 
+def _to_record(model: models.Collatz) -> models.CollatzRecord:
+    """Convert an ORM instance to its Pydantic schema."""
+
+    return models.CollatzRecord(
+        starting_number=model.starting_number,
+        number_of_steps=model.number_of_steps,
+        max_value=model.max_value,
+        sequence_length=model.sequence_length,
+        convergence=model.convergence,
+        timestamp=model.timestamp,
+    )
+
+
+def _serialize(records: Iterable[models.Collatz]) -> List[models.CollatzRecord]:
+    return [_to_record(record) for record in records]
+
+
 @router.get(
     "/{num}",
-    response_model=CollatzRecord,
+    response_model=models.CollatzRecord,
     summary="Retrieve Collatz Sequence",
     description="Get the Collatz sequence and its statistics for a specific starting number.",
 )
 def read_collatz(num: int, db: Session = Depends(get_db)):
     """Retrieve Collatz sequence and its statistics for a specific starting number."""
-    logger.info(f"Accessing Collatz sequence for number: {num}")
-    c = db.execute("SELECT * FROM collatz WHERE starting_number = ?", (num,))
-    data = c.fetchone()
-    if data is None:
+
+    logger.info("Accessing Collatz sequence for number: %s", num)
+    record = db.get(models.Collatz, num)
+    if record is None:
         raise HTTPException(status_code=404, detail="No data found for this number.")
-    else:
-        return CollatzRecord(
-            starting_number=data[0],
-            number_of_steps=data[1],
-            max_value=data[2],
-            sequence_length=data[3],
-            convergence=data[4],
-            timestamp=data[5],
-        )
+    return _to_record(record)
 
 
 @router.get(
@@ -39,21 +51,14 @@ def read_collatz(num: int, db: Session = Depends(get_db)):
 )
 def read_collatz_range(start: int, end: int, db: Session = Depends(get_db)):
     """Retrieve Collatz sequences for a range of starting numbers."""
-    c = db.execute(
-        "SELECT * FROM collatz WHERE starting_number BETWEEN ? AND ?", (start, end)
+
+    results = (
+        db.query(models.Collatz)
+        .filter(models.Collatz.starting_number.between(start, end))
+        .order_by(models.Collatz.starting_number.asc())
+        .all()
     )
-    data = c.fetchall()
-    return [
-        {
-            "starting_number": x[0],
-            "number_of_steps": x[1],
-            "max_value": x[2],
-            "sequence_length": x[3],
-            "convergence": x[4],
-            "timestamp": x[5],
-        }
-        for x in data
-    ]
+    return _serialize(results)
 
 
 @router.get(
@@ -63,19 +68,14 @@ def read_collatz_range(start: int, end: int, db: Session = Depends(get_db)):
 )
 def read_top_collatz(n: int, db: Session = Depends(get_db)):
     """Retrieve the top N Collatz sequences with the highest number of steps."""
-    c = db.execute("SELECT * FROM collatz ORDER BY number_of_steps DESC LIMIT ?", (n,))
-    data = c.fetchall()
-    return [
-        {
-            "starting_number": x[0],
-            "number_of_steps": x[1],
-            "max_value": x[2],
-            "sequence_length": x[3],
-            "convergence": x[4],
-            "timestamp": x[5],
-        }
-        for x in data
-    ]
+
+    results = (
+        db.query(models.Collatz)
+        .order_by(models.Collatz.number_of_steps.desc())
+        .limit(n)
+        .all()
+    )
+    return _serialize(results)
 
 
 @router.get(
@@ -85,11 +85,16 @@ def read_top_collatz(n: int, db: Session = Depends(get_db)):
 )
 def read_average_collatz(n: int, db: Session = Depends(get_db)):
     """Retrieve the average number of steps and average max value over the last N Collatz sequences."""
-    c = db.execute(
-        "SELECT AVG(number_of_steps), AVG(max_value) FROM (SELECT * FROM collatz ORDER BY starting_number DESC LIMIT ?)",
-        (n,),
+
+    subquery = (
+        db.query(models.Collatz)
+        .order_by(models.Collatz.starting_number.desc())
+        .limit(n)
+        .subquery()
     )
-    avg_steps, avg_max = c.fetchone()
+    avg_steps, avg_max = db.query(
+        func.avg(subquery.c.number_of_steps), func.avg(subquery.c.max_value)
+    ).one()
     return {"average_number_of_steps": avg_steps, "average_max_value": avg_max}
 
 
@@ -102,19 +107,14 @@ def read_search_collatz(
     number_of_steps: int, max_value: int, db: Session = Depends(get_db)
 ):
     """Search for Collatz sequences by a specific number of steps and max value."""
-    c = db.execute(
-        "SELECT * FROM collatz WHERE number_of_steps = ? AND max_value = ?",
-        (number_of_steps, max_value),
+
+    results = (
+        db.query(models.Collatz)
+        .filter(
+            models.Collatz.number_of_steps == number_of_steps,
+            models.Collatz.max_value == max_value,
+        )
+        .order_by(models.Collatz.starting_number.asc())
+        .all()
     )
-    data = c.fetchall()
-    return [
-        {
-            "starting_number": x[0],
-            "number_of_steps": x[1],
-            "max_value": x[2],
-            "sequence_length": x[3],
-            "convergence": x[4],
-            "timestamp": x[5],
-        }
-        for x in data
-    ]
+    return _serialize(results)

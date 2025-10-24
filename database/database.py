@@ -1,47 +1,42 @@
-import sqlite3
+from contextlib import contextmanager
+from typing import Generator
+
+from sqlalchemy import create_engine
+from sqlalchemy.orm import Session, sessionmaker
+
+SQLALCHEMY_DATABASE_URL = "sqlite:///collatz.db"
+
+engine = create_engine(
+    SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
+)
+SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
 
 
-def get_db():
-    """Yields a database connection."""
-    conn = sqlite3.connect("collatz.db")
-    db = conn.cursor()
+def setup_database() -> None:
+    """Create all database tables."""
+    from .models import Base
+
+    Base.metadata.create_all(bind=engine)
+
+
+def get_db() -> Generator[Session, None, None]:
+    """Yield a SQLAlchemy session for dependency injection."""
+    db = SessionLocal()
     try:
         yield db
     finally:
-        conn.close()
+        db.close()
 
 
-def setup_database():
-    """Creates the necessary tables if they do not exist."""
-    conn = sqlite3.connect("collatz.db")
-    c = conn.cursor()
-    tables = {
-        "collatz": """CREATE TABLE IF NOT EXISTS collatz (
-                      starting_number INTEGER,
-                      number_of_steps INTEGER,
-                      max_value INTEGER,
-                      sequence_length INTEGER,
-                      convergence INTEGER,
-                      timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
-                      )""",
-        "distribution": """CREATE TABLE IF NOT EXISTS distribution (
-                           stat_name TEXT,
-                           value REAL
-                           )""",
-        "sequence_length": """CREATE TABLE IF NOT EXISTS sequence_length (
-                              number INTEGER PRIMARY KEY,
-                              steps INTEGER
-                              )""",
-        "convergence": """CREATE TABLE IF NOT EXISTS convergence (
-                          number INTEGER PRIMARY KEY,
-                          converges INTEGER
-                          )""",
-        "date_time": """CREATE TABLE IF NOT EXISTS date_time (
-                        id INTEGER PRIMARY KEY,
-                        timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
-                        )""",
-    }
-    for table in tables.values():
-        c.execute(table)
-    conn.commit()
-    conn.close()
+@contextmanager
+def session_scope() -> Generator[Session, None, None]:
+    """Provide a transactional scope for raw scripts."""
+    session = SessionLocal()
+    try:
+        yield session
+        session.commit()
+    except Exception:
+        session.rollback()
+        raise
+    finally:
+        session.close()

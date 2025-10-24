@@ -1,23 +1,25 @@
-import sqlite3
 from statistics import median, pstdev
+from typing import List
 
-DB_FILE = "collatz.db"
+from sqlalchemy.orm import Session
+
+from database import models
 
 
-def check_collatz(n):
+def check_collatz(n: int, db: Session):
     """Perform the Collatz conjecture calculation for a given number."""
-    conn = sqlite3.connect(DB_FILE)
-    c = conn.cursor()
-    original_n, steps, max_value = n, 0, n
-    sequence = []
+
+    original_n = n
+    steps = 0
+    max_value = n
+    sequence: List[int] = []
 
     while True:
         sequence.append(n)
-        c.execute("SELECT steps FROM sequence_length WHERE number = ?", (n,))
-        row = c.fetchone()
+        cached_length = db.get(models.SequenceLength, n)
 
-        if row:
-            steps += row[0]
+        if cached_length is not None:
+            steps += cached_length.steps
             break
         elif n % 2 == 0:
             n //= 2
@@ -30,37 +32,37 @@ def check_collatz(n):
         if n in {1, 2, 4}:
             break
 
-    for i, num in enumerate(sequence):
-        c.execute(
-            "INSERT OR REPLACE INTO sequence_length VALUES (?, ?)", (num, steps - i)
-        )
+    for index, number in enumerate(sequence):
+        db.merge(models.SequenceLength(number=number, steps=steps - index))
 
-    converges = 1 if n == 1 else 0
-    c.execute(
-        "INSERT OR REPLACE INTO convergence VALUES (?, ?)", (original_n, converges)
-    )
-    conn.commit()
-    conn.close()
+    converges = n == 1
+    db.merge(models.Convergence(number=original_n, converges=converges))
 
-    return steps, max_value, steps - 1, converges
+    sequence_length = steps - 1 if steps > 0 else 0
+    return steps, max_value, sequence_length, converges
 
 
-def calculate_stats():
+def calculate_stats(db: Session) -> None:
     """Calculate statistics for the Collatz sequences."""
-    conn = sqlite3.connect(DB_FILE)
-    c = conn.cursor()
-    c.execute("SELECT max_value FROM collatz")
-    max_values = [row[0] for row in c.fetchall()]
+
+    max_values = [value for (value,) in db.query(models.Collatz.max_value).all()]
+
+    if not max_values:
+        return
 
     stats = {
-        "min": min(max_values) if max_values else 0,
-        "max": max(max_values) if max_values else 0,
-        "mean": sum(max_values) / len(max_values) if max_values else 0,
-        "median": median(max_values) if max_values else 0,
-        "std_dev": pstdev(max_values) if max_values else 0,
+        "min": min(max_values),
+        "max": max(max_values),
+        "mean": sum(max_values) / len(max_values),
+        "median": median(max_values),
+        "std_dev": pstdev(max_values) if len(max_values) > 1 else 0.0,
     }
 
     for stat, value in stats.items():
-        c.execute("INSERT INTO distribution VALUES (?, ?)", (stat, value))
-    conn.commit()
-    conn.close()
+        existing = db.get(models.Distribution, stat)
+        if existing is None:
+            db.add(models.Distribution(stat_name=stat, value=value))
+        else:
+            existing.value = value
+
+    db.commit()
