@@ -10,6 +10,9 @@ def check_collatz(n):
     c = conn.cursor()
     original_n, steps, max_value = n, 0, n
     sequence = []
+    remaining_steps = 0
+    cached_max_value = None
+    converges = 0
 
     while True:
         sequence.append(n)
@@ -17,9 +20,31 @@ def check_collatz(n):
         row = c.fetchone()
 
         if row:
-            steps += row[0]
+            cached_steps = row[0]
+            steps += cached_steps
+            remaining_steps = cached_steps
+            c.execute(
+                "SELECT max_value FROM collatz WHERE starting_number = ?", (n,)
+            )
+            cached_max = c.fetchone()
+            if cached_max is not None:
+                cached_max_value = cached_max[0]
+                max_value = max(max_value, cached_max_value)
+            c.execute(
+                "SELECT converges FROM convergence WHERE number = ?", (n,)
+            )
+            cached_convergence = c.fetchone()
+            if cached_convergence is not None:
+                converges = cached_convergence[0]
+            else:
+                converges = 1
             break
-        elif n % 2 == 0:
+
+        if n == 1:
+            converges = 1
+            break
+
+        if n % 2 == 0:
             n //= 2
         else:
             n = 3 * n + 1
@@ -27,22 +52,33 @@ def check_collatz(n):
         steps += 1
         max_value = max(max_value, n)
 
-        if n in {1, 2, 4}:
-            break
+    if remaining_steps and cached_max_value is None:
+        current = sequence[-1]
+        temp_max = max_value
+        for _ in range(remaining_steps):
+            if current == 1:
+                break
+            if current % 2 == 0:
+                current //= 2
+            else:
+                current = 3 * current + 1
+            temp_max = max(temp_max, current)
+        max_value = temp_max
 
     for i, num in enumerate(sequence):
         c.execute(
             "INSERT OR REPLACE INTO sequence_length VALUES (?, ?)", (num, steps - i)
         )
 
-    converges = 1 if n == 1 else 0
     c.execute(
         "INSERT OR REPLACE INTO convergence VALUES (?, ?)", (original_n, converges)
     )
     conn.commit()
     conn.close()
 
-    return steps, max_value, steps - 1, converges
+    sequence_length = len(sequence) + remaining_steps
+
+    return steps, max_value, sequence_length, converges
 
 
 def calculate_stats():
